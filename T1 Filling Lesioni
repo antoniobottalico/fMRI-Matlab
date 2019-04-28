@@ -1,0 +1,57 @@
+1) MARCARE LESIONI SU T2 E MASCHERARLE --> Out = LL.hdr/.img
+2) SEGMENT DELLA T1 CON SPM
+SPM --> fMRI --> Segment
+Data: immagine T1; altre modifiche: CSF cambiare in Native Space --> Run
+Output: C1t1.hdr/.img = gray matter; C2t1.hdr/.img = white matter; C3t1.hdr/.img = CSF;
+NB: sono tutte mappe di probabilità con valori da 0 a 255
+3) COREGISTER CON SPM: coregistro la T2 sulla T1 portandomi dietro le lesioni (sono nella T2e sono molto “brillanti”, “iperintense”)
+SPM --> fMRI --> Coregister (Est & Res)
+Reference: T1.img
+Source: T2.img
+Other images: LL.img (serviranno da “copertura”)
+Out = rT2.img e rLL.img (Sulle immagini T2 vengono segmente manualmente le lesioni ottenendo le immagini LL che poi tramite la matrice di trasformazione T (ottenuta dalla coregistrazione delle immagini T2 su T1) serviranno da mascheramento sulle immagini T1 ottenendo le immagini rLL.
+)
+altre modifiche: interpolation: 3rd degree b-spline --> Run
+29
+Procerure inerenti Cygwin
+Posizionarsi sulla directory contenente i pazienti.
+Accertarsi che i file rLL.hdr e rLL.img siano nella cartella del paziente e non in sottocartelle
+unzippare file con estenzione .gz
+gunzip I_*.gz (cancella file originali)
+conversione file con estenzione .nii in .hdr
+/cygdrive/c/Programmi/Xinapse/Jim6/Unix/ToAnalyze *pve_0.nii pve_0.hdr
+/cygdrive/c/Programmi/Xinapse/Jim6/Unix/ToAnalyze *pve_2.nii pve_2.hdr
+4) THRESHOLD DI C3 (CSF) al 70% di probabilità (valore 0.7 = 70% di 1) da togliere alle lesioni che, coregistrando possono essere entrate nei ventricoli (le lesioni sono piu’ brillanti) --> C3thr
+/cygdrive/c/Programmi/Xinapse/Jim6/Unix/Algebra -t 0.7 imm imm pve_0.hdr c3thr.hdr
+5) MASCHERARE rLL con CSF sogliato (C3thr)--> ottengo lesioni non in ventricoli,ma solo in wm --> rLLwm
+/cygdrive/c/Programmi/Xinapse/Jim6/Unix/Masker -i ../rLL.hdr c3thr.hdr rLLwm.hdr
+6) MASCHERARE C2 CON LE LESIONI NON IN VENTRICOLI (rLLwm) --> ottengo mappa probabilità di sost. bianca non sogliata (c'è un po' di sostanza grigia rimasta) senza lesioni --> C2masked
+/cygdrive/c/Programmi/Xinapse/Jim6/Unix/Masker -i pve_2.hdr rLLwm.hdr c2masked.hdr
+7) THRESHOLD DI C2 MASCHERATA (C2masked) al 70% di probabilità (valore 178 = 70% di 255) --> ottengo mappa di probabilità della bianca senza lesioni, senza grigia e senza ventricoli (normal appearing mwhite matter)--> probNAWM
+/cygdrive/c/Programmi/Xinapse/Jim6/Unix/Algebra -t 0.7 imm imm c2masked.hdr probNAWM.hdr
+8) MASCHERO LA T1 CON LA MAPPA DI BIANCA MASCHERATA E SOGLIATA (probNAWM) PER OTTENERE L'IMMAGINE DI NAWM E CALCOLARNE IL VALOR MEDIO
+/cygdrive/c/Programmi/Xinapse/Jim6/Unix/Masker ../mpr.hdr probNAWM.hdr NAWM.hdr
+/cygdrive/c/Programmi/Xinapse/Jim6/Unix/JimStats -M NAWM.hdr >meanNAWM.txt
+Procedura automatizzata da copiare e incollare sulla shell di cygwin
+find . -type d -name *sienax > lista.txt
+for i in $(cat lista.txt); do
+30
+cd $i
+gunzip I_*.gz
+/cygdrive/c/Programmi/Xinapse/Jim6/Unix/ToAnalyze *pve_0.nii pve_0.hdr
+/cygdrive/c/Programmi/Xinapse/Jim6/Unix/ToAnalyze *pve_2.nii pve_2.hdr
+/cygdrive/c/Programmi/Xinapse/Jim6/Unix/Algebra -t 0.7 imm imm pve_0.hdr c3thr.hdr
+/cygdrive/c/Programmi/Xinapse/Jim6/Unix/Masker -i ../rLL.hdr c3thr.hdr rLLwm.hdr
+/cygdrive/c/Programmi/Xinapse/Jim6/Unix/Masker -i pve_2.hdr rLLwm.hdr c2masked.hdr
+/cygdrive/c/Programmi/Xinapse/Jim6/Unix/Algebra -t 0.7 imm imm c2masked.hdr probNAWM.hdr
+/cygdrive/c/Programmi/Xinapse/Jim6/Unix/Masker ../mpr.hdr probNAWM.hdr NAWM.hdr
+/cygdrive/c/Programmi/Xinapse/Jim6/Unix/JimStats -M NAWM.hdr >meanNAWM.txt
+cd ../../
+done
+9) FILLING DELLE LESIONI CON IL VALOR MEDIO DELLA NAWM
+/cygdrive/c/Programmi/Xinapse/Jim6/Unix/Masker -b #val -i t1.hdr rLL.hdr t1_filled.hdr
+Procedura audomatizzata
+Usare il file comandi_mean.m che estrae la media dal file di testo meanNAWM e restituisce su file txt nella cartella pazienti i comandi per mascherare
+con cygwin .
+copiare e incollare sulla shell di cygwin il contenuto del file txt dopo essersi
+posizionati nella directory contenente i pazienti
