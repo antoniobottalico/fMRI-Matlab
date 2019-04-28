@@ -1,0 +1,25 @@
+1. STRUTTURA DATI: T1Img /PAZIENTE /files mpr
+NB: Se struttura dati è invece: PROTOCOLLO/PAZIENTE/SEQUENZE/3D_ORIG/files mpr
+allora lanciare prima: copia_mpr.m che prende le mpr di tutti i soggetti e le copia nella struttura:
+CARTELLA_OUTPUT(T1Img)/PAZIENTE /files mpr
+2. Programma: fsl (comandi da terminale)
+Mettiti nella cartella dove ci sono i pazienti (T1Img)
+Comandi per crt
+for file in *; do
+if [ -d $file ]; then
+cd $file; sienax s*01-1.hdr -d -r ; cd ..
+fi
+done
+comandi per pazienti:
+for file in *; do
+if [ -d $file ]; then
+cd $file; sienax mpr.hdr -d -r -lm pd+t2/3D_orig/rLL.hdr ; cd ..
+fi
+done
+NB: se files mpr terminano con "01-1.hdr" il comando qui sopra è giusto, se no cambiare.
+35
+Crea all'interno di ogni cartella pz la cartella nomefilempr_sienax con mappe segmentate e report.
+3. Programma: Matlab. Lanciare VolumiSienax_new.m per estrarre i dati dal report.
+crea un txt per ogni paziente (nomepaziente_volumes.xls) sia nella cartella nomefilempr_sienax che in una cartella di output. Crea un file riassuntivo con tutti i dati di tutti i pazienti della cartella (VolTot.xls). Nel Foglio1 mette tutti i report col nome del paziente a fianco, nel Foglio2 scrive il numero dei pazienti (servirà al punto 5)
+4. Aprire VolTot.xls con excel e dividere il testo in colonne: dati --> testo in colonne --> simbolo di divisione=spazio -->fine per ottenere ogni valore in una casella diversa. Salvare e chiudere VolTot.xls
+5. Programma: Matlab. Lanciare VolumiSienax_Database.m che richiede in ingresso il file VolTot.xls. Prende il numero di soggetti dal Foglio2, i dati dal Foglio 1 e crea il database su un nuovo foglio mettendo ogni valore su una colonna.
